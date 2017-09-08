@@ -8,32 +8,34 @@ end
 
 require 'grio/websocket'
 
+require 'grio/dsl'
+require 'grio/websocket'
+
 grio.run do |loop|
   grio.web_socket.serve "0.0.0.0",2222 do |s|
     s.on :connect do
-      p "Connected from"
-      s.puts "test"
+      s.puts "Welcome!"
     end
   
     s.on :message do |e|
-      puts "RECV: "+e.data
-     
-      s.puts e.data
+      puts "Server rcvd msg: #{e.data}"
     end
   end
   
   grio.web_socket.connect "0.0.0.0",2222 do |s|
     s.on :message do |e| 
-      puts "Client RECV: "+e.data 
-      
-      grio.timeout 333 do
-        s.puts Time.now.to_s
+      puts "Client rcvd msg: #{e.data}"
+    
+      grio.timeout 1000 do        
+        grio.quit
+        
         false
       end
     end
     
     s.on :open do
-      s.puts "MSG FROM CLI"
+      s.puts "Hello"
     end
   end
 end
+
