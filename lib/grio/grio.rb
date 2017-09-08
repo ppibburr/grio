@@ -16,7 +16,7 @@ module GLibRIO
 
   extend DSL
 
-  def self.read_nonblock socket,recv: false, max: 1024, &b
+  def self.read_nonblock socket=STDIN,recv: false, max: 1024, &b
     GLib::Idle.add do
       begin
         if (a = IO.select([socket],[],[],0))
@@ -29,6 +29,10 @@ module GLibRIO
         
       true
     end  
+  end
+  
+  def self.read socket=STDIN, recv: false, max: 1024, &b
+    read_nonblock socket, recv: recv, max: max, &b
   end
   
   module Socket
