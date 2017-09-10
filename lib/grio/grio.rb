@@ -68,7 +68,7 @@ module GLibRIO
   def self.run singleton=true, &b
     loop = GLib::MainLoop.new
     @main_loop = loop if singleton
-    b.call loop
+    b.call loop if b
     loop.run
   end
   
