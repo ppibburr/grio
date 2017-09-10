@@ -13,8 +13,8 @@ module GLibRIO
       GLibRIO.serve_web_socket h,p,&b
     end
     
-    def self.connect h,p,&b
-      GLibRIO.connect_web_socket h,p,&b
+    def self.connect h,p,uri: "", headers: {},&b
+      GLibRIO.connect_web_socket h,p,uri: uri,headers: headers,&b
     end
         
     module ServerSocket
@@ -26,15 +26,25 @@ module GLibRIO
     
     module ClientSocket
       include GLibRIO::WebSocket
-      def driver
+      def driver &b
         @driver ||= ::WebSocket::Driver.client(self)
+        
         # @driver.add_extension PermessageDeflate if !@init
+        
+        b.call(@driver) if b
+        
         @driver.start if is_a?(ClientSocket) and !@init
+        
         @init = true
+        
         @driver
       end
-    end    
-
+    end
+    
+    def url
+      @uri
+    end
+    
     def driver
 
     end
@@ -60,9 +70,7 @@ module GLibRIO
   
   module WebSocketClient
     include WebSocket::ClientSocket
-    def url
-      "ws://#{host}:#{port}"
-    end
+    attr_accessor :headers, :uri
   end
   
   def self.serve_web_socket h,p,&b
@@ -77,9 +85,16 @@ module GLibRIO
     end.extend WebSocketServer
   end
   
-  def self.connect_web_socket h,p, &b
+  def self.connect_web_socket h,p, uri: "", headers: {},&b
     wsc = connect h,p do |wsc|
-      wsc.extend(WebSocketClient)
+      wsc.extend(WebSocketClient)      
+        wsc.uri = uri == "" ? "ws://#{h}:#{p}" : uri
+
+        wsc.driver do |d|
+          headers.each_pair do |hd, v|
+           d.set_header hd.to_s,v.to_s
+        end
+      end
     
       wsc.listen do |data|
         wsc.driver.parse data  
@@ -89,39 +104,5 @@ module GLibRIO
     end
     
     wsc
-  end
-end
-
-if __FILE__ == $0
-  include GLibRIO::DSL
-  
-  grio.run do |loop|
-    grio.web_socket.serve "0.0.0.0",2222 do |s|
-      s.on :connect do
-        p "Connected from"
-        s.puts "test"
-      end
-    
-      s.on :message do |e|
-        puts "RECV: "+e.data
-       
-        s.puts e.data
-      end
-    end
-    
-    grio.web_socket.connect "0.0.0.0",2222 do |s|
-      s.on :message do |e| 
-        puts "Client RECV: "+e.data 
-        
-        grio.timeout 333 do
-          s.puts Time.now.to_s
-          false
-        end
-      end
-      
-      s.on :open do
-        s.puts "MSG FROM CLI"
-      end
-    end
   end
 end
