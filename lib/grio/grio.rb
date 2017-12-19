@@ -24,7 +24,11 @@ module GLibRIO
           b.call data
         end
       rescue => e;
-        raise e
+        if socket.respond_to?(:on_err)
+          next socket.on_err(e)
+        else
+          raise e
+        end
       end
         
       true
@@ -40,6 +44,10 @@ module GLibRIO
       GLibRIO.read_nonblock self, recv: recv, max: max do |data|
         on_recv data, &b
       end
+    end
+    
+    def on_err e
+      raise e
     end
     
     def on_recv data, &b
